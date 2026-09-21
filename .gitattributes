@@ -1,0 +1,10 @@
+* text=auto
+*.template text eol=lf
+*.cs text eol=lf
+*.xaml text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.sh text eol=lf

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="launcher/CommunityFrontier.Core/CommunityFrontier.Core.csproj" />
+  <Project Path="launcher/CommunityFrontier.Launcher/CommunityFrontier.Launcher.csproj" />
+  <Project Path="tests/CommunityFrontier.Tests/CommunityFrontier.Tests.csproj" />
+  <Project Path="tests/CommunityFrontier.SessionTests/CommunityFrontier.SessionTests.csproj" />
+</Solution>

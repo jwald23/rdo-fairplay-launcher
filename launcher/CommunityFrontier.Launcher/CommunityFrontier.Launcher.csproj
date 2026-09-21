@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>RDOFairPlay</AssemblyName>
+    <Product>RDO FairPlay</Product>
+    <Title>RDO FairPlay</Title>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../CommunityFrontier.Core/CommunityFrontier.Core.csproj" /></ItemGroup>
+  <ItemGroup><None Update="launcher.settings.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets/*.png" /></ItemGroup>
+  <ItemGroup><None Include="../../docs/THIRD_PARTY_LICENSE.txt" Link="THIRD_PARTY_LICENSE.txt" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+</Project>

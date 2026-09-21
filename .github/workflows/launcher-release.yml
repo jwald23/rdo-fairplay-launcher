@@ -1,0 +1,84 @@
+name: Launcher release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: launcher-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.repository == 'jwald23/rdo-fairplay-launcher'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build and test
+        run: ./scripts/Verify.ps1
+      - name: Package self-contained launcher
+        env:
+          RELEASE_VERSION: 0.2.${{ github.run_number }}
+        run: ./scripts/Publish.ps1 -Version $env:RELEASE_VERSION
+      - name: Smoke-test packaged executable
+        env:
+          RELEASE_VERSION: 0.2.${{ github.run_number }}
+        run: |
+          $exe = Join-Path $PWD "artifacts/releases/$env:RELEASE_VERSION/RDOFairPlay/RDOFairPlay.exe"
+          $process = Start-Process -FilePath $exe -ArgumentList '--render-preview','--small' -PassThru -WindowStyle Hidden
+          if (-not $process.WaitForExit(30000)) { throw 'Packaged launcher timed out' }
+          if ($process.ExitCode -ne 0) { throw 'Packaged launcher failed its startup checks' }
+      - name: Install installer compiler
+        run: |
+          $compilers = @((Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'), (Join-Path $env:ProgramFiles 'Inno Setup 6/ISCC.exe'))
+          if (-not ($compilers | Where-Object { Test-Path -LiteralPath $_ })) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
+          }
+      - name: Build Windows installer
+        env:
+          RELEASE_VERSION: 0.2.${{ github.run_number }}
+        run: ./scripts/Build-Installer.ps1 -Version $env:RELEASE_VERSION
+      - name: Test installer lifecycle
+        env:
+          RELEASE_VERSION: 0.2.${{ github.run_number }}
+        run: ./scripts/Test-Installer.ps1 -Version $env:RELEASE_VERSION
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: 0.2.${{ github.run_number }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "v$env:RELEASE_VERSION"
+          $folder = "artifacts/releases/$env:RELEASE_VERSION"
+          @"
+          Ready-to-run Windows x64 launcher, with .NET included.
+
+          Download and run **RDOFairPlay-Setup-Windows-x64.exe** to install the launcher. The installer includes .NET, adds a Start menu shortcut and offers an optional desktop shortcut. No administrator access is required.
+          Alternatively, download **RDOFairPlay-Windows-x64.zip** and extract the entire archive for the portable version.
+          Sign in with Discord; Support approval unlocks Fair Play. Original Settings works while awaiting verification.
+
+          To update, close the launcher and run the new installer. Saved settings and recovery data stay in LocalAppData. Uninstall restores managed game configuration first and preserves recovery files.
+          These builds are unsigned and do not auto-update. SHA256SUMS.txt contains both download checksums.
+
+          Built from commit $env:RELEASE_COMMIT. Downloads are available from the public release page.
+          "@ | Set-Content "$folder/RELEASE-NOTES.md" -Encoding utf8NoBOM
+          $existing = gh release view $tag --json isDraft 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            if (-not ($existing | ConvertFrom-Json).isDraft) { Write-Host 'Release already published; preserving its assets.'; exit 0 }
+          } else {
+            gh release create $tag --draft --target $env:RELEASE_COMMIT --title "RDO FairPlay $env:RELEASE_VERSION" --notes-file "$folder/RELEASE-NOTES.md"
+            if ($LASTEXITCODE -ne 0) { throw 'Release creation failed' }
+          }
+          gh release upload $tag "$folder/RDOFairPlay-Setup-Windows-x64.exe" "$folder/RDOFairPlay-Windows-x64.zip" "$folder/SHA256SUMS.txt" --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }
+          gh release edit $tag --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
