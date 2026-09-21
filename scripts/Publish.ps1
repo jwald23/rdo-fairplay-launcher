@@ -26,6 +26,9 @@ Your saved game location, sign-in and recovery files remain in LocalAppData/Comm
 Do not delete your recovery files while a private configuration is active.
 
 This portable build is not code-signed and does not auto-update.
+Browser and Windows reputation warnings may require confirmation.
+Read https://github.com/jwald23/rdo-fairplay-launcher/blob/main/docs/DOWNLOAD_VERIFICATION.md#browser-and-windows-warnings
+Keep antivirus enabled. If it detects a threat, stop and contact Support; do not add exclusions.
 Support: https://discord.gg/Mp6skUnf2b
 "@ | Set-Content (Join-Path $package 'START-HERE.txt') -Encoding utf8NoBOM
     $archive = Join-Path $releaseRoot 'RDOFairPlay-Windows-x64.zip'

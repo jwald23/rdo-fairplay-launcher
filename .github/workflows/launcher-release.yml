@@ -89,6 +89,7 @@ jobs:
 
           To update, close the launcher and run the new installer. Saved settings and recovery data stay in LocalAppData. Uninstall restores managed game configuration first and preserves recovery files.
           These builds are unsigned and do not auto-update. SHA256SUMS.txt contains both download checksums.
+          **Browser / Windows warnings:** You may need to confirm an uncommon download or unrecognized app. Read the [download and security instructions](https://github.com/jwald23/rdo-fairplay-launcher/blob/$env:RELEASE_COMMIT/docs/DOWNLOAD_VERIFICATION.md#browser-and-windows-warnings) first. Keep antivirus enabled; if it detects a threat, stop and contact Support rather than bypassing it.
 
           **Verify your download:** Both downloads have [signed GitHub build provenance]($env:ATTESTATION_URL), verified before publication. See [download verification instructions](https://github.com/jwald23/rdo-fairplay-launcher/blob/$env:RELEASE_COMMIT/docs/DOWNLOAD_VERIFICATION.md).
           Review the [build and test results]($env:BUILD_URL) and [source commit](https://github.com/jwald23/rdo-fairplay-launcher/commit/$env:RELEASE_COMMIT).

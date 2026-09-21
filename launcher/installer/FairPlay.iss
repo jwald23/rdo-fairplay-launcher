@@ -23,6 +23,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 DisableProgramGroupPage=yes
 WizardStyle=modern
+SetupIconFile=..\CommunityFrontier.Launcher\Assets\rdo-fairplay.ico
 OutputDir={#ReleaseDir}
 OutputBaseFilename=RDOFairPlay-Setup-Windows-x64
 Compression=lzma2

@@ -24,7 +24,21 @@ Get-FileHash .\RDOFairPlay-Setup-Windows-x64.exe -Algorithm SHA256
 
 Compare the entire hash with the matching filename in `SHA256SUMS.txt`; letter case does not matter. A matching checksum detects changed or damaged downloads. A checksum alone does not establish trust in its publisher.
 
-## Understand what these checks mean
+## Browser and Windows warnings
+
+The current downloads are unsigned and may require confirmation in your browser and Windows. Warnings vary by browser, Windows version, and device policy; they are not always shown. The installer does not require administrator access.
+
+1. Download from the official GitHub release above. Verify the checksum and build provenance before choosing to run it.
+2. If Microsoft Edge says the file is **not commonly downloaded**, open its Downloads panel and the file's menu. If you have verified the download and trust it, select **Keep**, then **Show more → Keep anyway** if offered. This is for a reputation warning, not a malware detection. Other browsers use different wording.
+3. Scan the saved file with your antivirus. With Microsoft Defender, right-click the file and choose **Scan with Microsoft Defender** (on Windows 11, this may be under **Show more options**).
+4. If Windows says **Windows protected your PC** because the app is unrecognized, **More info → Run anyway** may be available. Choose it only after verification and only if you trust this release. If your device policy or Smart App Control blocks it without that option, contact Support or your administrator; do not turn off those protections.
+5. If your antivirus identifies a threat or quarantines the file, stop. Keep it quarantined and send Support the release version, antivirus product, and exact detection name. We can investigate and submit a suspected false positive to the vendor. Do not disable antivirus, add exclusions, or restore a detected file just to run FairPlay.
+
+An uncommon-download warning is not itself a malware verdict. Equally, an antivirus detection must not automatically be dismissed as a false positive. Checksums and provenance do not guarantee that code is safe.
+
+See [Microsoft's Edge download guidance](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-security-smartscreen) and [Microsoft's file-analysis submission portal](https://www.microsoft.com/en-us/wdsi/filesubmission).
+
+## Limits of verification
 
 No badge, antivirus result, or signature proves that software cannot be malicious. Public source allows inspection; provenance identifies the build origin; hashes verify file integrity. These do not independently audit the code or guarantee its behavior.
 
