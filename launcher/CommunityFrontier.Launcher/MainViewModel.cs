@@ -23,6 +23,29 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly FairPlayClient online;
     private AccountStatus? account;
     private bool checkingAccount;
+    private string keyStatus = "Key · Not checked";
+    public string KeyStatus { get => keyStatus; private set { keyStatus = value; Changed(); } }
+    private async Task RefreshKey()
+    {
+        KeyStatus = "Key · Checking…";
+        try
+        {
+            if (selected is null) { KeyStatus = "Key · Select your game"; return; }
+            var state = (await writer.ReadStateAsync()).SingleOrDefault(s => string.Equals(s.GamePath, selected.InstallationPath, StringComparison.OrdinalIgnoreCase));
+            if (state is null || state.Mode != PlayMode.Community) { KeyStatus = "Key · Fair Play not applied"; return; }
+            if (state.Operation != "Applied") { KeyStatus = "Key · Recovery needed"; return; }
+            var path = PathSafety.Target(selected.InstallationPath);
+            if (new FileInfo(path).Length > 1024 * 1024) { KeyStatus = "Key · File changed"; return; }
+            var bytes = await File.ReadAllBytesAsync(path);
+            var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+            var fingerprint = StartupMetaFormatter.Fingerprint(bytes);
+            if (!string.Equals(hash, state.GeneratedSha256, StringComparison.OrdinalIgnoreCase) || fingerprint is null) { KeyStatus = "Key · File changed"; return; }
+            if (!FairPlayAvailable) { KeyStatus = "Key · Verification required to check"; return; }
+            KeyStatus = await online.IsCurrentKey(fingerprint, default) ? "Key · Current ✓" : "Key · Outdated — relaunch Fair Play";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Net.Http.HttpRequestException or TaskCanceledException or FriendlyException or System.Text.Json.JsonException)
+        { KeyStatus = "Key · Unable to check"; }
+    }
     private DateTimeOffset lastAccountCheck;
     public const string DiscordInvite = "https://discord.gg/Mp6skUnf2b";
     private CancellationTokenSource? login;
@@ -69,7 +92,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => selected;
         set
         {
-            selected = value;
+            selected = value; KeyStatus = "Key · Refresh to check";
             if (value is not null)
             {
                 try { local.SaveGame(value); }
@@ -130,7 +153,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             try
             {
-                if (online.Connected) { await online.SignOut(default); account = null; Status = "Signed out of Discord."; }
+                if (online.Connected) { await online.SignOut(default); account = null; KeyStatus = "Key · Sign in to check"; Status = "Signed out of Discord."; }
                 else
                 {
                     using var cancellation = new CancellationTokenSource(); login = cancellation; RefreshCommands();
@@ -156,6 +179,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
             var identifier = mode == PlayMode.Community ? await online.Allocate(default) : null;
             await coordinator.PlayAsync(selected!, mode, identifier);
+            await RefreshKey();
             Status = "Your game launcher is opening. Choose Online in Red Dead to start playing.";
         }, true, () => mode != PlayMode.Community || FairPlayAvailable);
         RestoreCommand = Command(async () => { await writer.RestoreAsync(selected!.InstallationPath); Restored(); }, true);
@@ -202,11 +226,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (Exception e) when (e is System.Net.Http.HttpRequestException or TaskCanceledException or FriendlyException or System.Text.Json.JsonException)
         { Status = online.Connected ? "Account status is unavailable. Check your connection and try Refresh status." : "Sign in with Discord to check your account."; }
         finally { checkingAccount = false; lastAccountCheck = DateTimeOffset.UtcNow; NotifyAccount(); }
+        await RefreshKey();
     }
     public Task RefreshAccountOnReturnAsync()
     {
         if (IsBusy) return Task.CompletedTask;
-        if (!online.Connected) { account = null; NotifyAccount(); return Task.CompletedTask; }
+        if (!online.Connected) { account = null; KeyStatus = "Key · Sign in to check"; NotifyAccount(); return Task.CompletedTask; }
         return DateTimeOffset.UtcNow - lastAccountCheck >= TimeSpan.FromSeconds(10) ? Run(RefreshAccount) : Task.CompletedTask;
     }
     public void Close() => online.Dispose();
@@ -227,6 +252,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Status = "Recovered an interrupted operation. Your original game configuration has been restored.";
         }
         else if (states.Count > 0) Status = "A private configuration is still active. Choose Play to use your selected mode, or Restore original settings.";
+        await RefreshKey();
     });
     private async Task Detect()
     {
@@ -292,7 +318,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             _ => "We couldn’t finish that step. Your backups are kept. Try Check everything or Emergency restore."
         };
     }
-    private void Restored() { SetMode(PlayMode.Normal); Status = "Red Dead has been restored to its pre-launcher configuration. Any file that existed before this launcher is preserved."; }
+    private void Restored() { KeyStatus = "Key · Fair Play not applied"; SetMode(PlayMode.Normal); Status = "Red Dead has been restored to its pre-launcher configuration. Any file that existed before this launcher is preserved."; }
     private static void Open(string path) => Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     private void Changed([CallerMemberName] string? property = null) => PropertyChanged?.Invoke(this, new(property));
     private void RefreshCommands() { foreach (var command in commands) command.Refresh(); }

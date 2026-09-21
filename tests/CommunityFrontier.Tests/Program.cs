@@ -10,6 +10,14 @@ void Bytes(byte[] expected, byte[] actual) { if (!expected.SequenceEqual(actual)
 async Task Throws<T>(Func<Task> run) where T : Exception
 { try { await run(); } catch (T) { return; } throw new Exception($"Expected {typeof(T).Name}"); }
 
+Test("Key fingerprint accepts only a complete canonical configuration", () =>
+{
+    var identifier = new string('a', 64); var formatter = new StartupMetaFormatter();
+    Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(identifier))), StartupMetaFormatter.Fingerprint(formatter.Format(identifier)));
+    Equal<string?>(null, StartupMetaFormatter.Fingerprint(Encoding.UTF8.GetBytes(identifier)));
+    Equal<string?>(null, StartupMetaFormatter.Fingerprint(formatter.Format(identifier).Concat(new byte[] { 10 }).ToArray()));
+    return Task.CompletedTask;
+});
 Test("Steam metadata finds a game on an additional library", () =>
 {
     using var f = new Fixture();

@@ -10,6 +10,10 @@ Download **RDOFairPlay-Setup-Windows-x64.exe** from [the latest release](https:/
 
 Join [RDO FairPlay on Discord](https://discord.gg/Mp6skUnf2b), submit your Red Dead Online username, and wait for Support approval. Fair Play unlocks once access is confirmed. Original Settings remains available while you wait.
 
+FairPlay focuses on external mods, mod menus, cheats and hacks. In-game glitches and exploits are allowed. PvP, griefing, harassment and being unpleasant do not remove lobby-key access. Support requires adequate photographic or video evidence identifying the account using external cheats before suspending access. Read the rules channel and submit evidence privately through Support. This does not guarantee hacker-free sessions.
+
+The launcher's key indicator checks the applied game configuration against the backend every 30 seconds and when you refresh status. An outdated key means you should close Red Dead and launch Fair Play again. An unavailable check is never displayed as current. The indicator checks the file on disk, not the key used by an already-running game session.
+
 ## Updating and uninstalling
 
 Close the launcher and run the newer installer to update. Uninstall restores managed game configuration first and stops if recovery fails. Your settings and recovery files remain under `%LocalAppData%\CommunityFrontier`.

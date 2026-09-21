@@ -14,6 +14,13 @@ public sealed partial class StartupMetaFormatter : ILobbyConfigurationFormatter
         return reader.ReadToEnd().Replace("\r\n", "\n");
     }
     public static string NewSoloIdentifier() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+    public static string? Fingerprint(byte[] configuration)
+    {
+        var text = Encoding.UTF8.GetString(configuration);
+        if (!text.StartsWith(Template, StringComparison.Ordinal)) return null;
+        var identifier = text[Template.Length..];
+        return IdentifierPattern().IsMatch(identifier) ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identifier))) : null;
+    }
     public byte[] Format(string identifier)
     {
         if (!IdentifierPattern().IsMatch(identifier))

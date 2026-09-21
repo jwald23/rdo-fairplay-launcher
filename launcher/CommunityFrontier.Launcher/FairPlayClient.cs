@@ -27,6 +27,14 @@ public sealed class FairPlayClient : IDisposable
         session = saved?.Token; sessionExpiry = saved?.ExpiresAt ?? default;
     }
     public bool Connected => session != null && sessionExpiry > DateTimeOffset.UtcNow;
+    public async Task<bool> IsCurrentKey(string fingerprint, CancellationToken ct)
+    {
+        using var request = Request(HttpMethod.Post, "api/v1/lobbies/key-status");
+        request.Content = JsonContent.Create(new { communityId = options.CommunityId, fingerprint });
+        using var response = await http.SendAsync(request, ct); await Check(response);
+        return (await response.Content.ReadFromJsonAsync<KeyStatus>(ct) ?? throw new FriendlyException("Key status unavailable.")).Current;
+    }
+    private sealed record KeyStatus(bool Current);
     public async Task<AccountStatus> GetAccountStatus(CancellationToken ct)
     {
         if (!Connected) throw new FriendlyException("Sign in with Discord to check your FairPlay account.");

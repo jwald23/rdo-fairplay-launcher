@@ -25,6 +25,7 @@
             <Border BorderBrush="#333333" BorderThickness="0,1,0,0" Margin="0,0,0,14"/>
             <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding DiscordIcon}" Foreground="{Binding DiscordColor}" Width="24"/><TextBlock Text="{Binding DiscordStatus}" FontSize="12"/></StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,10,0,0"><TextBlock Text="{Binding ServerIcon}" Foreground="{Binding ServerColor}" Width="24"/><TextBlock Text="{Binding ServerStatus}" FontSize="12"/></StackPanel>
+            <TextBlock Text="{Binding KeyStatus}" FontSize="12" Margin="0,12,0,0" Foreground="#D4B288" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" ToolTip="Checks your applied game configuration against the server every 30 seconds. This does not inspect an already-running game session. Use Refresh status to check now."/>
           </StackPanel>
           <StackPanel Grid.Row="3">
             <Button Content="Open Discord · Verify" Command="{Binding JoinDiscordCommand}" Margin="0,0,0,8" Padding="12,11" Background="#292522"/>

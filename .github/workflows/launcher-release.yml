@@ -86,6 +86,7 @@ jobs:
           Download and run **RDOFairPlay-Setup-Windows-x64.exe** to install the launcher. The installer includes .NET, adds a Start menu shortcut and offers an optional desktop shortcut. No administrator access is required.
           Alternatively, download **RDOFairPlay-Windows-x64.zip** and extract the entire archive for the portable version.
           Sign in with Discord; Support approval unlocks Fair Play. Original Settings works while awaiting verification.
+          The account panel shows whether your applied lobby key is current. If outdated, close Red Dead and relaunch Fair Play. This checks your configuration on disk, not an already-running game session.
 
           To update, close the launcher and run the new installer. Saved settings and recovery data stay in LocalAppData. Uninstall restores managed game configuration first and preserves recovery files.
           These builds are unsigned and do not auto-update. SHA256SUMS.txt contains both download checksums.
