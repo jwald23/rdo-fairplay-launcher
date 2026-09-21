@@ -2,6 +2,8 @@
 
 A Windows launcher for shared private Red Dead Online lobbies, with Discord sign-in and support-reviewed access.
 
+[![Launcher build and tests](https://github.com/jwald23/rdo-fairplay-launcher/actions/workflows/launcher-release.yml/badge.svg)](https://github.com/jwald23/rdo-fairplay-launcher/actions/workflows/launcher-release.yml)
+
 ## Download
 
 Download **RDOFairPlay-Setup-Windows-x64.exe** from [the latest release](https://github.com/jwald23/rdo-fairplay-launcher/releases/latest). Run the installer, open FairPlay, and sign in with Discord. The .NET runtime is included. A portable ZIP is also available.
@@ -13,6 +15,8 @@ Join [RDO FairPlay on Discord](https://discord.gg/Mp6skUnf2b), submit your Red D
 Close the launcher and run the newer installer to update. Uninstall restores managed game configuration first and stops if recovery fails. Your settings and recovery files remain under `%LocalAppData%\CommunityFrontier`.
 
 The installer is currently unsigned. Release assets include SHA256 checksums. Downloads do not update themselves automatically.
+
+New releases include signed GitHub build provenance for the installer and portable ZIP. [Verify your download](docs/DOWNLOAD_VERIFICATION.md) and review its public source and build results. Provenance confirms where a file was built, not that it is free of malicious behavior.
 
 ## Build
 

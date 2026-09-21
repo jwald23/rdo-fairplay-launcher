@@ -5,6 +5,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 concurrency:
   group: launcher-release
   cancel-in-progress: false
@@ -49,12 +51,31 @@ jobs:
         env:
           RELEASE_VERSION: 0.2.${{ github.run_number }}
         run: ./scripts/Test-Installer.ps1 -Version $env:RELEASE_VERSION
+      - name: Attest download provenance
+        id: provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            artifacts/releases/0.2.${{ github.run_number }}/RDOFairPlay-Setup-Windows-x64.exe
+            artifacts/releases/0.2.${{ github.run_number }}/RDOFairPlay-Windows-x64.zip
+      - name: Verify download provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: 0.2.${{ github.run_number }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          foreach ($name in @('RDOFairPlay-Setup-Windows-x64.exe', 'RDOFairPlay-Windows-x64.zip')) {
+            gh attestation verify "artifacts/releases/$env:RELEASE_VERSION/$name" --repo $env:GH_REPO --signer-workflow "$env:GH_REPO/.github/workflows/launcher-release.yml"
+            if ($LASTEXITCODE -ne 0) { throw "Provenance verification failed: $name" }
+          }
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_VERSION: 0.2.${{ github.run_number }}
           RELEASE_COMMIT: ${{ github.sha }}
+          ATTESTATION_URL: ${{ steps.provenance.outputs.attestation-url }}
+          BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = "v$env:RELEASE_VERSION"
@@ -69,7 +90,9 @@ jobs:
           To update, close the launcher and run the new installer. Saved settings and recovery data stay in LocalAppData. Uninstall restores managed game configuration first and preserves recovery files.
           These builds are unsigned and do not auto-update. SHA256SUMS.txt contains both download checksums.
 
-          Built from commit $env:RELEASE_COMMIT. Downloads are available from the public release page.
+          **Verify your download:** Both downloads have [signed GitHub build provenance]($env:ATTESTATION_URL), verified before publication. See [download verification instructions](https://github.com/jwald23/rdo-fairplay-launcher/blob/$env:RELEASE_COMMIT/docs/DOWNLOAD_VERIFICATION.md).
+          Review the [build and test results]($env:BUILD_URL) and [source commit](https://github.com/jwald23/rdo-fairplay-launcher/commit/$env:RELEASE_COMMIT).
+          Provenance verifies origin and integrity; it is not a malware scan or Windows publisher signature.
           "@ | Set-Content "$folder/RELEASE-NOTES.md" -Encoding utf8NoBOM
           $existing = gh release view $tag --json isDraft 2>$null
           if ($LASTEXITCODE -eq 0) {
