@@ -11,7 +11,16 @@ namespace CommunityFrontier.Launcher;
 
 public sealed record AccountStatus(bool DiscordConnected, bool ServerJoined, bool RockstarLinked, string? RockstarName, bool AccessEnabled, string Stage, string? ErrorCategory, bool ReceiverAvailable);
 
-public sealed class FairPlayClient : IDisposable
+public interface IFairPlayClient : IDisposable
+{
+    bool Connected { get; }
+    Task<AccountStatus> GetAccountStatus(CancellationToken ct);
+    Task<bool> IsCurrentKey(string fingerprint, CancellationToken ct);
+    Task SignIn(CancellationToken ct);
+    Task SignOut(CancellationToken ct);
+    Task<string> Allocate(CancellationToken ct);
+}
+public sealed class FairPlayClient : IFairPlayClient
 {
     private readonly LauncherSettings options;
     private readonly SessionStore store;

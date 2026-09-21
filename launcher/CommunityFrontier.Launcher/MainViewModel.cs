@@ -20,31 +20,60 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly ILobbyConfigurationWriter writer;
     private readonly LaunchCoordinator coordinator;
     private readonly IEventLog log;
-    private readonly FairPlayClient online;
+    private readonly IFairPlayClient online;
+    private readonly CancellationTokenSource lifetime = new();
+    private bool closed, accountCheckFailed;
+    private int sessionRevision;
+    private Task? accountRefresh;
+    private bool diagnosticsOpen;
+    public bool DiagnosticsOpen { get => diagnosticsOpen; set { diagnosticsOpen = value; Changed(); } }
+    public string VersionLabel => "Version " + (typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "unknown");
+    public ICommand ReleasesCommand { get; }
+    public bool DiscordConnected => online.Connected;
+    public string AccountRefreshLabel => checkingAccount ? "Checking access…" : accountCheckFailed ? "Unable to confirm access — try Refresh status." : lastAccountCheck == default ? "Access has not been checked yet." : $"Access checked {lastAccountCheck.ToLocalTime():h:mm tt}";
+    public string FairPlayAccessibleName => "Fair Play — " + (FairPlayAvailable ? "verified and available" : accountCheckFailed ? "access unavailable" : checkingAccount ? "checking access" : "requires verification");
+    public string ModeGuidance => FairPlayAvailable ? "Choose Fair Play for the private lobby, or Original Settings for your usual setup." : !online.Connected ? "Sign in for Fair Play. You can use Original Settings without verification." : accountCheckFailed ? "We cannot confirm Fair Play access right now. Original Settings remains available." : VerificationPending ? "Awaiting verification. Original Settings still lets you play online normally." : "Fair Play stays locked until verified. Original Settings lets you play online normally.";
+    public string PrimaryAccountLabel => !online.Connected ? "Sign in with Discord" : accountCheckFailed ? "Retry access check" : !FairPlayAvailable ? "Open Discord · Verify" : "Open FairPlay Discord";
+    public ICommand PrimaryAccountCommand => !online.Connected ? DiscordCommand : accountCheckFailed ? RefreshAccountCommand : JoinDiscordCommand;
     private AccountStatus? account;
     private bool checkingAccount;
-    private string keyStatus = "Key · Not checked";
+    private string keyStatus = "Installed key · Not checked";
+    private string keyColor = "#C8BBA5";
+    private DateTimeOffset? lastKeyCheck;
+    private int keyRevision;
     public string KeyStatus { get => keyStatus; private set { keyStatus = value; Changed(); } }
+    public string KeyColor { get => keyColor; private set { keyColor = value; Changed(); } }
+    public string KeyDetail => (lastKeyCheck is null ? "" : $"Last confirmed {lastKeyCheck.Value.ToLocalTime():h:mm tt}. ") + "Checks the installed file, not a running game session.";
+    private void SetKey(string text, string color = "#C8BBA5") { KeyStatus = "Installed key · " + text; KeyColor = color; Changed(nameof(KeyDetail)); }
     private async Task RefreshKey()
     {
-        KeyStatus = "Key · Checking…";
+        var game = selected;
+        var revision = ++keyRevision;
+        void Update(string text, string color = "#C8BBA5") { if (!closed && revision == keyRevision && selected == game) SetKey(text, color); }
         try
         {
-            if (selected is null) { KeyStatus = "Key · Select your game"; return; }
-            var state = (await writer.ReadStateAsync()).SingleOrDefault(s => string.Equals(s.GamePath, selected.InstallationPath, StringComparison.OrdinalIgnoreCase));
-            if (state is null || state.Mode != PlayMode.Community) { KeyStatus = "Key · Fair Play not applied"; return; }
-            if (state.Operation != "Applied") { KeyStatus = "Key · Recovery needed"; return; }
-            var path = PathSafety.Target(selected.InstallationPath);
-            if (new FileInfo(path).Length > 1024 * 1024) { KeyStatus = "Key · File changed"; return; }
-            var bytes = await File.ReadAllBytesAsync(path);
+            if (game is null) { Update("Select your game"); return; }
+            var state = (await writer.ReadStateAsync()).SingleOrDefault(s => string.Equals(s.GamePath, game.InstallationPath, StringComparison.OrdinalIgnoreCase));
+            if (state is null || state.Mode != PlayMode.Community) { Update("Not applied"); return; }
+            if (state.Operation != "Applied") { Update("Recovery needed", "#E37C72"); return; }
+            var path = PathSafety.Target(game.InstallationPath);
+            if (new FileInfo(path).Length > 1024 * 1024) { Update("File changed", "#E37C72"); return; }
+            var bytes = await File.ReadAllBytesAsync(path, lifetime.Token);
             var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
             var fingerprint = StartupMetaFormatter.Fingerprint(bytes);
-            if (!string.Equals(hash, state.GeneratedSha256, StringComparison.OrdinalIgnoreCase) || fingerprint is null) { KeyStatus = "Key · File changed"; return; }
-            if (!FairPlayAvailable) { KeyStatus = "Key · Verification required to check"; return; }
-            KeyStatus = await online.IsCurrentKey(fingerprint, default) ? "Key · Current ✓" : "Key · Outdated — relaunch Fair Play";
+            if (!string.Equals(hash, state.GeneratedSha256, StringComparison.OrdinalIgnoreCase) || fingerprint is null) { Update("File changed", "#E37C72"); return; }
+            if (!online.Connected) { Update("Sign in to check"); return; }
+            if (accountCheckFailed || account is null) { Update("? Unable to check", "#D4B288"); return; }
+            if (!FairPlayAvailable) { Update("Verification required to check"); return; }
+            var current = await online.IsCurrentKey(fingerprint, lifetime.Token);
+            if (closed || selected != game || revision != keyRevision) return;
+            var latest = await File.ReadAllBytesAsync(path, lifetime.Token);
+            if (!System.Security.Cryptography.SHA256.HashData(latest).AsSpan().SequenceEqual(System.Security.Cryptography.SHA256.HashData(bytes))) { Update("File changed", "#E37C72"); return; }
+            lastKeyCheck = DateTimeOffset.Now;
+            Update(current ? "✓ Current" : "! Outdated — close Red Dead, then launch Fair Play", current ? "#82BD88" : "#D4B288");
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Net.Http.HttpRequestException or TaskCanceledException or FriendlyException or System.Text.Json.JsonException)
-        { KeyStatus = "Key · Unable to check"; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Net.Http.HttpRequestException or OperationCanceledException or FriendlyException or System.Text.Json.JsonException)
+        { if (!closed && selected == game) Update("? Unable to check", "#D4B288"); }
     }
     private DateTimeOffset lastAccountCheck;
     public const string DiscordInvite = "https://discord.gg/Mp6skUnf2b";
@@ -63,20 +92,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private bool settingsOpen;
     public bool SettingsOpen { get => settingsOpen; private set { settingsOpen = value; Changed(); } }
     public ICommand ToggleSettingsCommand { get; }
-    public bool FairPlayAvailable => online.Connected && account?.AccessEnabled == true;
-    public string FairPlayBadge => FairPlayAvailable ? "VERIFIED" : "LOCKED";
+    public bool FairPlayAvailable => online.Connected && !accountCheckFailed && account?.AccessEnabled == true;
+    public string FairPlayBadge => FairPlayAvailable ? "VERIFIED" : accountCheckFailed ? "UNAVAILABLE" : checkingAccount ? "CHECKING" : "LOCKED";
     public string FairPlayDescription => "Join the FairPlay private lobby with your verified account.";
     public string DiscordStatus => online.Connected ? "Discord linked" : "Discord not linked";
     public string DiscordIcon => online.Connected ? "✓" : "✕";
     public string DiscordColor => online.Connected ? "#82BD88" : "#E37C72";
     public string ServerIcon => !online.Connected ? "✕" : account is null ? "?" : account.ServerJoined ? "✓" : "✕";
     public string ServerColor => !online.Connected ? "#E37C72" : account is null ? "#C8BBA5" : account.ServerJoined ? "#82BD88" : "#E37C72";
-    public string ServerStatus => checkingAccount ? "Checking Discord membership…" : online.Connected && account is null ? "Server status unavailable" : account?.ServerJoined == true && online.Connected ? "FairPlay Discord joined" : "Join the FairPlay Discord";
+    public string ServerStatus => checkingAccount && account is null ? "Checking Discord membership…" : online.Connected && account is null ? "Server status unavailable" : account?.ServerJoined == true && online.Connected ? "FairPlay Discord joined" : "Join the FairPlay Discord";
     private bool VerificationPending => account?.Stage is "REVIEW_PENDING" or "ROLE_SYNC_PENDING";
     public string RockstarIcon => !online.Connected ? "✕" : account is null ? "?" : account.AccessEnabled ? "✓" : VerificationPending ? "…" : "✕";
-    public string RockstarColor => !online.Connected ? "#E37C72" : account is null ? "#C8BBA5" : account.AccessEnabled ? "#82BD88" : VerificationPending ? "#C79947" : "#E37C72";
-    public string RockstarStatus => checkingAccount ? "Checking verification…" : !online.Connected ? "Sign in to get started" : account is null ? "Verification status unavailable" : account.AccessEnabled ? $"Verified · {account.RockstarName}" : account.ErrorCategory == "ACCESS_HOLD" ? "Fair Play access on hold" : VerificationPending ? "Awaiting verification" : "Verification needed";
-    public string AccountSummary => checkingAccount ? "Restoring your sign-in and checking your current FairPlay access." : !online.Connected ? "Sign in, join our Discord, then submit your Red Dead Online username." : account is null ? "Could not check your account. Refresh to try again." : account.ErrorCategory == "ACCESS_HOLD" ? "Fair Play access is on hold. Contact Support in Discord." : !account.ServerJoined ? "Join our Discord to continue." : account.ErrorCategory == "RULES_PENDING" ? "Accept the server rules in Discord to continue." : account.AccessEnabled ? "Ready for Fair Play." : account.Stage == "REVIEW_PENDING" ? "Support is reviewing your Red Dead name. Fair Play unlocks once your Verified role is granted." : account.Stage == "ROLE_SYNC_PENDING" ? "Support approved your name. Awaiting your Verified role before Fair Play unlocks." : account.Stage is "REJECTED" or "CHANGES_REQUESTED" ? "Support reviewed your request. Check Status in Discord for their note and submit a corrected name." : "Use Verify My Account in Discord to submit your Red Dead name for Support approval.";
+    public string RockstarColor => accountCheckFailed ? "#D4B288" : !online.Connected ? "#E37C72" : account is null ? "#C8BBA5" : account.AccessEnabled ? "#82BD88" : VerificationPending ? "#C79947" : "#E37C72";
+    public string RockstarStatus => accountCheckFailed ? "Access check unavailable" : checkingAccount && account is null ? "Checking verification…" : !online.Connected ? "Sign in to get started" : account is null ? "Verification status unavailable" : account.AccessEnabled ? $"Verified · {account.RockstarName}" : account.ErrorCategory == "ACCESS_HOLD" ? "Fair Play access on hold" : VerificationPending ? "Awaiting verification" : "Verification needed";
+    public string AccountSummary => accountCheckFailed ? "We could not confirm your current access. Try Refresh status. Your Discord sign-in is still saved." : checkingAccount && account is null ? "Restoring your sign-in and checking your current FairPlay access." : !online.Connected ? "Sign in, join our Discord, then submit your Red Dead Online username." : account is null ? "Could not check your account. Refresh to try again." : account.ErrorCategory == "ACCESS_HOLD" ? "Fair Play access is on hold. Contact Support in Discord." : !account.ServerJoined ? "Join our Discord to continue." : account.ErrorCategory == "RULES_PENDING" ? "Accept the server rules in Discord to continue." : account.AccessEnabled ? "Ready for Fair Play." : account.Stage == "REVIEW_PENDING" ? "Support is reviewing your Red Dead name. Fair Play unlocks once your Verified role is granted." : account.Stage == "ROLE_SYNC_PENDING" ? "Support approved your name. Awaiting your Verified role before Fair Play unlocks." : account.Stage is "REJECTED" or "CHANGES_REQUESTED" ? "Support reviewed your request. Check Status in Discord for their note and submit a corrected name." : "Use Verify My Account in Discord to submit your Red Dead name for Support approval.";
     public ICommand JoinDiscordCommand { get; }
     public ICommand RefreshAccountCommand { get; }
     public string DiscordButtonLabel => online.Connected ? "Sign out" : "Sign in with Discord";
@@ -92,7 +121,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => selected;
         set
         {
-            selected = value; KeyStatus = "Key · Refresh to check";
+            selected = value; keyRevision++; lastKeyCheck = null; SetKey(value is null ? "Select your game" : "Refresh to check");
             if (value is not null)
             {
                 try { local.SaveGame(value); }
@@ -116,7 +145,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool FairPlaySelected { get => mode == PlayMode.Community; set { if (value && FairPlayAvailable) SetMode(PlayMode.Community); } }
     public bool OriginalSettingsSelected { get => mode == PlayMode.Normal; set { if (value) SetMode(PlayMode.Normal); } }
     public string SelectedModeName => mode == PlayMode.Community ? "Fair Play" : "Original Settings";
-    public string PlayLabel => mode == PlayMode.Community ? FairPlayAvailable ? "Play Fair Play" : "Verification required" : "Play with Original Settings";
+    public string PlayLabel => mode == PlayMode.Normal ? "Play with Original Settings" : FairPlayAvailable ? "Play Fair Play" : accountCheckFailed ? "Access unavailable" : checkingAccount ? "Checking access…" : !online.Connected ? "Sign in for Fair Play" : "Verification required";
     private void SetMode(PlayMode value)
     {
         mode = value;
@@ -140,25 +169,29 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand HelpCommand { get; }
 
     public MainViewModel(LauncherSettings options, LocalSettings local, IGameInstallationDetector detector,
-        IGameInstallationValidator validator, ILobbyConfigurationWriter writer, LaunchCoordinator coordinator, IEventLog log)
+        IGameInstallationValidator validator, ILobbyConfigurationWriter writer, LaunchCoordinator coordinator, IEventLog log, IFairPlayClient? client = null)
     {
         this.options = options; this.local = local; this.detector = detector; this.validator = validator;
         this.writer = writer; this.coordinator = coordinator; this.log = log;
-        online = new FairPlayClient(options, local.Root);
+        online = client ?? new FairPlayClient(options, local.Root);
         checkingAccount = online.Connected;
         ToggleSettingsCommand = new UiCommand(() => { SettingsOpen = !SettingsOpen; return Task.CompletedTask; }, () => true);
         JoinDiscordCommand = Command(() => { Open(DiscordInvite); return Task.CompletedTask; });
-        RefreshAccountCommand = Command(RefreshAccount);
+        var refresh = new UiCommand(RefreshAccount, () => !busy && !checkingAccount);
+        commands.Add(refresh); RefreshAccountCommand = refresh;
+        ReleasesCommand = new UiCommand(() => { Open("https://github.com/jwald23/rdo-fairplay-launcher/releases/latest"); return Task.CompletedTask; }, () => true);
         DiscordCommand = Command(async () =>
         {
             try
             {
-                if (online.Connected) { await online.SignOut(default); account = null; KeyStatus = "Key · Sign in to check"; Status = "Signed out of Discord."; }
+                sessionRevision++;
+                if (online.Connected) { await online.SignOut(default); account = null; accountCheckFailed = false; SetKey("Sign in to check"); Status = "Signed out of Discord."; }
                 else
                 {
                     using var cancellation = new CancellationTokenSource(); login = cancellation; RefreshCommands();
                     Status = "Finish signing in with Discord in your browser. You can cancel below.";
                     await online.SignIn(cancellation.Token);
+                    if (accountRefresh is { IsCompleted: false }) await accountRefresh;
                     await RefreshAccount();
                     Status = AccountSummary;
                 }
@@ -171,7 +204,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             if (mode == PlayMode.Community)
             {
                 await RefreshAccount();
-                if (account?.AccessEnabled != true)
+                if (!FairPlayAvailable)
                 {
                     Status = AccountSummary + " You can still play online using Original Settings.";
                     return;
@@ -219,30 +252,38 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return Task.CompletedTask;
         });
     }
-    private async Task RefreshAccount()
+    private Task RefreshAccount() => closed ? Task.CompletedTask : accountRefresh is { IsCompleted: false } ? accountRefresh : accountRefresh = RefreshAccountCore();
+    public Task RefreshAccountAsync() => RefreshAccount();
+    private async Task RefreshAccountCore()
     {
-        account = null; checkingAccount = online.Connected; NotifyAccount();
-        try { if (online.Connected) account = await online.GetAccountStatus(default); }
-        catch (Exception e) when (e is System.Net.Http.HttpRequestException or TaskCanceledException or FriendlyException or System.Text.Json.JsonException)
-        { Status = online.Connected ? "Account status is unavailable. Check your connection and try Refresh status." : "Sign in with Discord to check your account."; }
-        finally { checkingAccount = false; lastAccountCheck = DateTimeOffset.UtcNow; NotifyAccount(); }
-        await RefreshKey();
+        var revision = sessionRevision;
+        checkingAccount = online.Connected; NotifyAccount();
+        try
+        {
+            var result = online.Connected ? await online.GetAccountStatus(lifetime.Token) : null;
+            if (!closed && revision == sessionRevision) { account = online.Connected ? result : null; accountCheckFailed = false; lastAccountCheck = DateTimeOffset.UtcNow; }
+        }
+        catch (Exception e) when (e is System.Net.Http.HttpRequestException or OperationCanceledException or FriendlyException or System.Text.Json.JsonException)
+        { if (!closed && revision == sessionRevision) { accountCheckFailed = online.Connected; if (!online.Connected) account = null; } }
+        finally { checkingAccount = false; if (!closed) NotifyAccount(); }
+        if (!closed) await RefreshKey();
     }
     public Task RefreshAccountOnReturnAsync()
     {
-        if (IsBusy) return Task.CompletedTask;
-        if (!online.Connected) { account = null; KeyStatus = "Key · Sign in to check"; NotifyAccount(); return Task.CompletedTask; }
-        return DateTimeOffset.UtcNow - lastAccountCheck >= TimeSpan.FromSeconds(10) ? Run(RefreshAccount) : Task.CompletedTask;
+        if (IsBusy || checkingAccount || closed) return Task.CompletedTask;
+        if (!online.Connected) { account = null; accountCheckFailed = false; SetKey("Sign in to check"); NotifyAccount(); return Task.CompletedTask; }
+        return DateTimeOffset.UtcNow - lastAccountCheck >= TimeSpan.FromSeconds(10) ? RefreshAccount() : Task.CompletedTask;
     }
-    public void Close() => online.Dispose();
+    public void Close() { closed = true; lifetime.Cancel(); online.Dispose(); }
     private void NotifyAccount()
     {
-        foreach (var name in new[] { nameof(DiscordStatus), nameof(DiscordButtonLabel), nameof(DiscordIcon), nameof(DiscordColor), nameof(ServerIcon), nameof(ServerColor), nameof(ServerStatus), nameof(RockstarIcon), nameof(RockstarColor), nameof(RockstarStatus), nameof(AccountSummary), nameof(FairPlayAvailable), nameof(FairPlayBadge), nameof(PlayLabel) }) Changed(name);
+        foreach (var name in new[] { nameof(DiscordStatus), nameof(DiscordButtonLabel), nameof(DiscordIcon), nameof(DiscordColor), nameof(ServerIcon), nameof(ServerColor), nameof(ServerStatus), nameof(RockstarIcon), nameof(RockstarColor), nameof(RockstarStatus), nameof(AccountSummary), nameof(FairPlayAvailable), nameof(FairPlayBadge), nameof(PlayLabel), nameof(ModeGuidance), nameof(AccountRefreshLabel), nameof(DiscordConnected), nameof(PrimaryAccountLabel), nameof(PrimaryAccountCommand), nameof(FairPlayAccessibleName) }) Changed(name);
         RefreshCommands();
     }
-    public Task InitializeAsync() => Run(async () =>
+    public async Task InitializeAsync()
     {
-        await RefreshAccount();
+      await Run(async () =>
+      {
         await Detect();
         var states = await writer.ReadStateAsync();
         if (states.Any(s => s.Operation != "Applied"))
@@ -252,8 +293,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Status = "Recovered an interrupted operation. Your original game configuration has been restored.";
         }
         else if (states.Count > 0) Status = "A private configuration is still active. Choose Play to use your selected mode, or Restore original settings.";
-        await RefreshKey();
-    });
+      });
+      if (!closed) await RefreshAccount();
+    }
     private async Task Detect()
     {
         Status = "Finding Red Dead in Steam, Epic Games and Rockstar…";
@@ -271,8 +313,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (found.Count == 1) SelectedInstallation = found[0];
         Status = found.Count switch
         {
-            0 => "We haven’t found Red Dead yet. Try Search my computer or Find my game.",
-            1 => "Select a mode, then press Play.",
+            0 => "We haven’t found Red Dead yet. Use Find game or Settings & help to choose its location.",
+            1 => "Your game is ready.",
             _ => "Multiple installations found. Choose your game in Settings & help."
         };
         Changed(nameof(InstallationPrompt));
@@ -281,8 +323,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         var states = await writer.ReadStateAsync();
         var health = selected is null ? "No installation selected" : await writer.DiagnoseAsync(selected.InstallationPath);
-        Diagnostics = $"{ProductName} 0.1.0 — Phase 3 development\nGame: {selected?.InstallationPath ?? "Not found"}\nPlatform: {selected?.Platform}\nValidation: {(selected is not null && validator.IsValid(selected.InstallationPath) ? "Passed" : "Not ready")}\nDetection: {selected?.DetectionMethod}\nConfiguration: {health}\nSelected mode: {SelectedModeName}\nRecovery records: {states.Count}\nDiscord: {(online.Connected ? "Connected" : "Signed out")}\nBackend: {(options.BackendUrl is null ? "Not configured" : "Configured; live status checked when playing")}\nDevice: Not registered (Phase 6)\nLocal recovery: {local.Root}\n";
-        Status = "Local checks finished. Open Advanced diagnostics to see the results.";
+        Diagnostics = $"{ProductName} {VersionLabel}\nGame: {selected?.InstallationPath ?? "Not found"}\nPlatform: {selected?.Platform}\nValidation: {(selected is not null && validator.IsValid(selected.InstallationPath) ? "Passed" : "Not ready")}\nDetection: {selected?.DetectionMethod}\nConfiguration: {health}\nSelected mode: {SelectedModeName}\nRecovery records: {states.Count}\nDiscord: {(online.Connected ? "Connected" : "Signed out")}\nBackend: {(options.BackendUrl is null ? "Not configured" : "Configured; live status checked when playing")}\nLocal recovery: {local.Root}\n";
+        DiagnosticsOpen = true;
+        Status = "Local checks finished. Results are shown below.";
     }
     private UiCommand Command(Func<Task> action, bool needsGame = false, Func<bool>? allowed = null)
     {
@@ -318,7 +361,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             _ => "We couldn’t finish that step. Your backups are kept. Try Check everything or Emergency restore."
         };
     }
-    private void Restored() { KeyStatus = "Key · Fair Play not applied"; SetMode(PlayMode.Normal); Status = "Red Dead has been restored to its pre-launcher configuration. Any file that existed before this launcher is preserved."; }
+    private void Restored() { lastKeyCheck = null; SetKey("Not applied"); SetMode(PlayMode.Normal); Status = "Red Dead has been restored to its pre-launcher configuration. Any file that existed before this launcher is preserved."; }
     private static void Open(string path) => Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
     private void Changed([CallerMemberName] string? property = null) => PropertyChanged?.Invoke(this, new(property));
     private void RefreshCommands() { foreach (var command in commands) command.Refresh(); }

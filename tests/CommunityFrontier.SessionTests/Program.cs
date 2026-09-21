@@ -49,6 +49,7 @@ try
     Check(store.Load() == null, "Expired credential is not restored");
     File.WriteAllText(Path.Combine(root, "discord-session.bin"), "corrupt");
     Check(store.Load() == null, "Corrupt credential falls back to sign-in");
+    await LauncherStatusTests.Run(Path.Combine(root, "status"));
 }
 finally { Directory.Delete(root, true); }
 

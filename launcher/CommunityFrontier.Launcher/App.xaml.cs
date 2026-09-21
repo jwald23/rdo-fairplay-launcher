@@ -52,11 +52,11 @@ public partial class App : Application
                     throw new InvalidOperationException("Fair Play must be selected on startup.");
                 if (!Descendants(window).OfType<Button>().Any(b => Equals(b.Content, "Sign in with Discord")))
                     throw new InvalidOperationException("Discord sign-in must be visible.");
-                if (!Descendants(window).OfType<Button>().Any(b => Equals(b.Content, "Open Discord · Verify")) ||
+                if (!Descendants(window).OfType<Button>().Any(b => Equals(b.Content, "Open Discord")) ||
                     !Descendants(window).OfType<Button>().Any(b => Equals(b.Content, "Refresh status")) || vm.DiscordIcon != "✕" || vm.RockstarIcon != "✕")
                     throw new InvalidOperationException("Account status and verification actions must be visible and signed out by default.");
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                if (!Descendants(window).OfType<Button>().Any(b => Equals(b.Content, "Verification required")))
+                if (!Descendants(window).OfType<Button>().Any(b => Equals(b.Content, "Sign in for Fair Play")))
                     throw new InvalidOperationException("Play-mode binding failed.");
                 vm.SelectedInstallation = new DetectedGameInstallation(Path.GetFullPath("artifacts/ui-fixtures/game"), GamePlatform.Steam, Path.GetFullPath("artifacts/ui-fixtures/game/RDR2.exe"), "UI fixture");
                 if (vm.PlayCommand.CanExecute(null)) throw new InvalidOperationException("An installation must not unlock unverified Fair Play.");
@@ -86,7 +86,25 @@ public partial class App : Application
                 window.UpdateLayout();
                 if (e.Args.Contains("--details"))
                 {
-                    Descendants(window).OfType<ScrollViewer>().First().ScrollToBottom();
+                    Descendants(window).OfType<ScrollViewer>().Last(v => v.IsVisible && v.ScrollableHeight > 0).ScrollToBottom();
+                    window.UpdateLayout();
+                }
+                if (e.Args.Contains("--example"))
+                {
+                    // Display-only fixture for product illustrations. It has no commands or authenticated client.
+                    foreach (var radio in Descendants(window).OfType<RadioButton>())
+                        radio.SetBinding(RadioButton.IsCheckedProperty, new System.Windows.Data.Binding(System.Windows.Automation.AutomationProperties.GetName(radio).StartsWith("Fair Play") ? "FairPlaySelected" : "OriginalSettingsSelected") { Mode = System.Windows.Data.BindingMode.OneWay });
+                    window.DataContext = new {
+                        SettingsOpen = false, IsIdle = true, RockstarStatus = "Verified · Frontier_Rider", RockstarColor = "#82BD88",
+                        AccountSummary = "Ready for Fair Play.", DiscordIcon = "✓", DiscordColor = "#82BD88", DiscordStatus = "Discord linked",
+                        ServerIcon = "✓", ServerColor = "#82BD88", ServerStatus = "FairPlay Discord joined", AccountRefreshLabel = "Access checked just now",
+                        KeyStatus = "Installed key · ✓ Current", KeyColor = "#82BD88", KeyDetail = "Checks the installed file, not a running game session.",
+                        PrimaryAccountLabel = "Open FairPlay Discord", DiscordConnected = true, GameStatus = "Ready to play · Steam",
+                        FairPlaySelected = true, OriginalSettingsSelected = false, FairPlayAvailable = true, FairPlayBadge = "VERIFIED", FairPlayAccessibleName = "Fair Play — verified and available",
+                        ModeGuidance = "Choose Fair Play for the private lobby, or Original Settings for your usual setup.",
+                        Status = "Example account · Your next session is ready.", PlayLabel = "Play Fair Play", CancelCommand = new UiCommand(() => Task.CompletedTask, () => false)
+                    };
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                     window.UpdateLayout();
                 }
                 var content = (FrameworkElement)window.Content;
@@ -94,7 +112,7 @@ public partial class App : Application
                 bitmap.Render(window);
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 Directory.CreateDirectory("artifacts");
-                var suffix = e.Args.Contains("--details") ? "-details" : e.Args.Contains("--small") ? "-small" : "";
+                var suffix = e.Args.Contains("--example") ? "-example" : e.Args.Contains("--details") ? "-details" : e.Args.Contains("--small") ? "-small" : "";
                 using (var output = File.Create($"artifacts/launcher-preview{suffix}.png")) encoder.Save(output);
                 Shutdown(); return;
             }

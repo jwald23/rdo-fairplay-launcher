@@ -6,6 +6,11 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SizeChanged += (_, _) => {
+            var compact = ActualHeight < 700;
+            HeaderRow.Height = new GridLength(compact ? 88 : 124);
+            HeaderLogo.Width = HeaderLogo.Height = compact ? 72 : 108;
+        };
         accountTimer.Tick += async (_, _) => { if (DataContext is MainViewModel vm) await vm.RefreshAccountOnReturnAsync(); };
         Activated += async (_, _) => { if (DataContext is MainViewModel vm) await vm.RefreshAccountOnReturnAsync(); };
         Loaded += (_, _) => accountTimer.Start();
