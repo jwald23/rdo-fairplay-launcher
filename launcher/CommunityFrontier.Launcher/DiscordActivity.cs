@@ -40,7 +40,7 @@ public sealed class DiscordActivity(IEventLog log, Func<IDiscordActivityClient>?
         try
         {
             client = createClient?.Invoke() ?? new DiscordActivityRpcClient();
-            // Queue before connecting; the library restores this after Discord reconnects.
+            // Store before connecting; the adapter publishes only after Discord is ready.
             client.SetPresence(CreatePresence());
             if (!client.Initialize()) Stop();
         }
@@ -66,13 +66,40 @@ public sealed class DiscordActivity(IEventLog log, Func<IDiscordActivityClient>?
 
 public sealed class DiscordActivityRpcClient(int pipe = -1) : IDiscordActivityClient
 {
-    // Reconnecting must resend the same card even when its text has not changed.
+    // On the first READY, synchronize an empty activity before publishing the card.
+    // This also resets stale Discord client state left by a previous launcher process.
     private readonly DiscordRpcClient rpc = new(DiscordActivity.ApplicationId, pipe) { ShutdownOnly = true, SkipIdenticalPresence = false };
-    public bool Initialize() => rpc.Initialize();
-    public void SetPresence(RichPresence presence) => rpc.SetPresence(presence);
+    private readonly object gate = new();
+    private RichPresence? pending;
+    private bool closing;
+    public bool Initialize()
+    {
+        rpc.OnReady += (_, _) =>
+        {
+            lock (gate)
+            {
+                if (closing || pending is null) return;
+                // Discord can ignore activity queued before READY. Resend on every connection,
+                // including reconnects where the card itself has not changed.
+                rpc.SkipIdenticalPresence = false;
+                try { rpc.SetPresence(pending); }
+                finally { rpc.SkipIdenticalPresence = true; }
+            }
+        };
+        return rpc.Initialize();
+    }
+    public void SetPresence(RichPresence presence)
+    {
+        lock (gate)
+        {
+            if (closing) return;
+            pending = presence;
+            if (rpc.IsInitialized && rpc.CurrentUser is not null) rpc.SetPresence(presence);
+        }
+    }
     public void Dispose()
     {
-        if (rpc.IsDisposed) return;
+        lock (gate) { if (closing) return; closing = true; }
         try
         {
             if (!rpc.IsInitialized || rpc.CurrentUser is null) return;

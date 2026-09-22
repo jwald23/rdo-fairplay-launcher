@@ -52,6 +52,10 @@ static class DiscordActivityTests
         using var real = new DiscordActivity(new NullEventLog(), () => new DiscordActivityRpcClient(pipeNumber));
         real.SetEnabled(true);
         await Accept(pipe, token);
+        var reset = await Read(pipe, token);
+        Check(reset.GetProperty("args").GetProperty("activity").ValueKind == JsonValueKind.Null,
+            "First connection resets stale activity before publishing the card");
+        await Send(pipe, new { cmd = "SET_ACTIVITY", nonce = reset.GetProperty("nonce").GetString(), data = (object?)null }, token);
         var command = await Read(pipe, token);
         var payload = command.GetProperty("args").GetProperty("activity");
         Check(command.GetProperty("cmd").GetString() == "SET_ACTIVITY" && payload.GetProperty("state").GetString() == "Launcher open",
