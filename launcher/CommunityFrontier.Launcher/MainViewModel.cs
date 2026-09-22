@@ -21,6 +21,29 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly LaunchCoordinator coordinator;
     private readonly IEventLog log;
     private readonly IFairPlayClient online;
+    private readonly IDiscordActivity? activity;
+    private bool discordActivityEnabled;
+    public bool DiscordActivityEnabled
+    {
+        get => discordActivityEnabled;
+        set
+        {
+            if (closed || discordActivityEnabled == value) return;
+            // Disable immediately even if saving the preference fails.
+            if (!value) activity?.SetEnabled(false);
+            try { local.SaveDiscordActivity(value); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                if (!value) discordActivityEnabled = false;
+                Changed();
+                Status = "Discord activity preference could not be saved. Check your user folder permissions before reopening FairPlay.";
+                return;
+            }
+            discordActivityEnabled = value;
+            activity?.SetEnabled(value);
+            Changed();
+        }
+    }
     private readonly CancellationTokenSource lifetime = new();
     private bool closed, accountCheckFailed;
     private int sessionRevision;
@@ -169,11 +192,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand HelpCommand { get; }
 
     public MainViewModel(LauncherSettings options, LocalSettings local, IGameInstallationDetector detector,
-        IGameInstallationValidator validator, ILobbyConfigurationWriter writer, LaunchCoordinator coordinator, IEventLog log, IFairPlayClient? client = null)
+        IGameInstallationValidator validator, ILobbyConfigurationWriter writer, LaunchCoordinator coordinator, IEventLog log, IFairPlayClient? client = null, IDiscordActivity? activity = null)
     {
         this.options = options; this.local = local; this.detector = detector; this.validator = validator;
         this.writer = writer; this.coordinator = coordinator; this.log = log;
         online = client ?? new FairPlayClient(options, local.Root);
+        this.activity = activity;
+        discordActivityEnabled = local.LoadDiscordActivity();
+        activity?.SetEnabled(discordActivityEnabled);
         checkingAccount = online.Connected;
         ToggleSettingsCommand = new UiCommand(() => { SettingsOpen = !SettingsOpen; return Task.CompletedTask; }, () => true);
         JoinDiscordCommand = Command(() => { Open(DiscordInvite); return Task.CompletedTask; });
@@ -274,7 +300,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         if (!online.Connected) { account = null; accountCheckFailed = false; SetKey("Sign in to check"); NotifyAccount(); return Task.CompletedTask; }
         return DateTimeOffset.UtcNow - lastAccountCheck >= TimeSpan.FromSeconds(10) ? RefreshAccount() : Task.CompletedTask;
     }
-    public void Close() { closed = true; lifetime.Cancel(); online.Dispose(); }
+    public void Close() { closed = true; lifetime.Cancel(); activity?.Dispose(); online.Dispose(); }
     private void NotifyAccount()
     {
         foreach (var name in new[] { nameof(DiscordStatus), nameof(DiscordButtonLabel), nameof(DiscordIcon), nameof(DiscordColor), nameof(ServerIcon), nameof(ServerColor), nameof(ServerStatus), nameof(RockstarIcon), nameof(RockstarColor), nameof(RockstarStatus), nameof(AccountSummary), nameof(FairPlayAvailable), nameof(FairPlayBadge), nameof(PlayLabel), nameof(ModeGuidance), nameof(AccountRefreshLabel), nameof(DiscordConnected), nameof(PrimaryAccountLabel), nameof(PrimaryAccountCommand), nameof(FairPlayAccessibleName) }) Changed(name);

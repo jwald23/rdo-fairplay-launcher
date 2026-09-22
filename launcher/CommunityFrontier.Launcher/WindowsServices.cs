@@ -103,6 +103,21 @@ public sealed record LauncherSettings
 public sealed class LocalSettings(string root)
 {
     public string Root { get; } = root;
+    public bool LoadDiscordActivity()
+    {
+        try { return JsonSerializer.Deserialize<ActivityPreference>(File.ReadAllText(Path.Combine(Root, "discord-activity.json")))?.Enabled ?? false; }
+        catch (FileNotFoundException) { return true; }
+        catch (DirectoryNotFoundException) { return true; }
+        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return false; }
+    }
+    public void SaveDiscordActivity(bool enabled)
+    {
+        Directory.CreateDirectory(Root);
+        var path = Path.Combine(Root, "discord-activity.json");
+        File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(new ActivityPreference(enabled)));
+        File.Move(path + ".tmp", path, true);
+    }
+    private sealed record ActivityPreference(bool Enabled);
     public DetectedGameInstallation? LoadGame()
     {
         try { return JsonSerializer.Deserialize<DetectedGameInstallation>(File.ReadAllText(Path.Combine(Root, "installation.json"))); }

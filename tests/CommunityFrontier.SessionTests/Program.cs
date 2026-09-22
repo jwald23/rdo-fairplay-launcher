@@ -50,6 +50,7 @@ try
     File.WriteAllText(Path.Combine(root, "discord-session.bin"), "corrupt");
     Check(store.Load() == null, "Corrupt credential falls back to sign-in");
     await LauncherStatusTests.Run(Path.Combine(root, "status"));
+    await DiscordActivityTests.Run(Path.Combine(root, "activity"));
 }
 finally { Directory.Delete(root, true); }
 

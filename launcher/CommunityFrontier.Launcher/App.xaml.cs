@@ -12,6 +12,7 @@ namespace CommunityFrontier.Launcher;
 public partial class App : Application
 {
     private Mutex? instance;
+    private DiscordActivity? activity;
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -35,8 +36,9 @@ public partial class App : Application
                 if (!uninstallCheck) MessageBox.Show("All recorded installations have been restored to their pre-launcher configuration. Backups have been kept.", options.ProductName);
                 Shutdown(0); return;
             }
+            if (!e.Args.Contains("--render-preview")) activity = new DiscordActivity(log);
             var vm = new MainViewModel(options, local, detector, validator, writer,
-                new LaunchCoordinator(writer, new StartupMetaFormatter(), runner, validator), log);
+                new LaunchCoordinator(writer, new StartupMetaFormatter(), runner, validator), log, activity: activity);
             var window = new MainWindow { DataContext = vm, Title = options.ProductName };
             MainWindow = window;
             window.Show();
@@ -76,6 +78,7 @@ public partial class App : Application
                 if (lockedMode.IsEnabled) throw new InvalidOperationException("Fair Play radio must be visibly disabled until verified.");
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                 if (e.Args.Contains("--small")) { window.Width = window.MinWidth; window.Height = window.MinHeight; }
+                if (e.Args.Contains("--settings")) vm.ToggleSettingsCommand.Execute(null);
                 if (e.Args.Contains("--details"))
                 {
                     if (!vm.SettingsOpen) vm.ToggleSettingsCommand.Execute(null);
@@ -112,7 +115,7 @@ public partial class App : Application
                 bitmap.Render(window);
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 Directory.CreateDirectory("artifacts");
-                var suffix = e.Args.Contains("--example") ? "-example" : e.Args.Contains("--details") ? "-details" : e.Args.Contains("--small") ? "-small" : "";
+                var suffix = e.Args.Contains("--example") ? "-example" : e.Args.Contains("--settings") ? "-settings" : e.Args.Contains("--details") ? "-details" : e.Args.Contains("--small") ? "-small" : "";
                 using (var output = File.Create($"artifacts/launcher-preview{suffix}.png")) encoder.Save(output);
                 Shutdown(); return;
             }
@@ -140,5 +143,5 @@ public partial class App : Application
             foreach (var descendant in Descendants(child)) yield return descendant;
         }
     }
-    protected override void OnExit(ExitEventArgs e) { instance?.Dispose(); base.OnExit(e); }
+    protected override void OnExit(ExitEventArgs e) { activity?.Dispose(); instance?.Dispose(); base.OnExit(e); }
 }

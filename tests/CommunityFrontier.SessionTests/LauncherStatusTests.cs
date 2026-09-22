@@ -8,7 +8,13 @@ static class LauncherStatusTests
     {
         void Check(bool value, string message) { if (!value) throw new Exception(message); Console.WriteLine("PASS " + message); }
         var client = new TestAccountClient(); var files = new TestFiles(); var runner = new TestRunner(); var validator = new TestValidator();
-        var vm = new MainViewModel(new(), new(root), new TestDetector(), validator, files, new(files, new StartupMetaFormatter(), runner, validator), new NullEventLog(), client);
+        var activity = new TestActivity();
+        var vm = new MainViewModel(new(), new(root), new TestDetector(), validator, files, new(files, new StartupMetaFormatter(), runner, validator), new NullEventLog(), client, activity);
+        Check(vm.DiscordActivityEnabled && activity.Enabled, "Launcher starts activity from its saved preference");
+        vm.DiscordActivityEnabled = false;
+        Check(!activity.Enabled && !new LocalSettings(root).LoadDiscordActivity(), "Settings toggle disables activity and persists the choice");
+        vm.DiscordActivityEnabled = true;
+        Check(activity.Enabled, "Settings toggle can restore activity");
         vm.SelectedInstallation = new(root, GamePlatform.Steam, Path.Combine(root, "RDR2.exe"), "fixture");
         await vm.RefreshAccountAsync();
         Check(vm.FairPlayAvailable && vm.RockstarStatus.Contains("__Rider__"), "Verified account retains underscores and unlocks Fair Play");
@@ -31,6 +37,13 @@ static class LauncherStatusTests
         client.Read = ct => closing.Task.WaitAsync(ct); var duringClose = vm.RefreshAccountAsync();
         vm.Close(); await duringClose;
         Check(client.Disposed && !vm.IsBusy, "Closing cancels an account refresh without blocking shutdown");
+        Check(activity.Disposed, "Closing the launcher clears its Discord activity service");
+    }
+    sealed class TestActivity : IDiscordActivity
+    {
+        public bool Enabled, Disposed;
+        public void SetEnabled(bool enabled) => Enabled = enabled;
+        public void Dispose() => Disposed = true;
     }
     sealed class TestAccountClient : IFairPlayClient
     {

@@ -14,6 +14,10 @@ FairPlay focuses on external mods, mod menus, cheats and hacks. In-game glitches
 
 The launcher's key indicator checks the applied game configuration against the backend every 30 seconds and when you refresh status. An outdated key means you should close Red Dead and launch Fair Play again. An unavailable check is never displayed as current. The indicator checks the file on disk, not the key used by an already-running game session.
 
+## Discord activity
+
+With the Discord desktop app running, FairPlay can show its logo and links to the project and Discord server on your profile while the launcher is open. Activity sharing must also be enabled in Discord. Turn this off in **Settings & help → Discord activity**; the preference is remembered. Closing FairPlay clears its activity. It does not publish your account details, verification status, lobby key, player counts, or join secrets. Website and Discord buttons are for other people viewing your activity; Discord may hide them on your own profile.
+
 ## Updating and uninstalling
 
 Close the launcher and run the newer installer to update. Uninstall restores managed game configuration first and stops if recovery fails. Your settings and recovery files remain under `%LocalAppData%\CommunityFrontier`.
