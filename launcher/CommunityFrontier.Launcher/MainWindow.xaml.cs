@@ -9,7 +9,8 @@ public partial class MainWindow : Window
         SizeChanged += (_, _) => {
             var compact = ActualHeight < 700;
             HeaderRow.Height = new GridLength(compact ? 88 : 124);
-            HeaderLogo.Width = HeaderLogo.Height = compact ? 72 : 108;
+            HeaderLogo.Width = compact ? 230 : 324;
+            HeaderLogo.Height = compact ? 71 : 100;
         };
         accountTimer.Tick += async (_, _) => { if (DataContext is MainViewModel vm) await vm.RefreshAccountOnReturnAsync(); };
         Activated += async (_, _) => { if (DataContext is MainViewModel vm) await vm.RefreshAccountOnReturnAsync(); };
