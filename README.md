@@ -26,6 +26,12 @@ The installer is currently unsigned. Release assets include SHA256 checksums. Do
 
 New releases include signed GitHub build provenance for the installer and portable ZIP. [Verify your download](docs/DOWNLOAD_VERIFICATION.md) and review its public source and build results. Provenance confirms where a file was built, not that it is free of malicious behavior.
 
+## Download evidence
+
+Each new release includes exact-file VirusTotal lookup links, SHA256 hashes, file sizes, Windows signature status and a machine-readable NuGet dependency advisory report. Open the [latest release](https://github.com/jwald23/rdo-fairplay-launcher/releases/latest) and read **DOWNLOAD-EVIDENCE.md**. A lookup link is not a completed scan or a clean verdict. Check the report date and compare its hash with your download.
+
+[How to interpret the evidence](docs/DOWNLOAD_VERIFICATION.md#virustotal-reports-and-release-evidence). No independent security audit or guarantee of safety is claimed.
+
 ## Build
 
 Windows, the .NET 10 SDK, and PowerShell 7 are required. Run `scripts/Verify.ps1` to build and test. Run `scripts/Publish.ps1 -Version 0.2.0` to package the self-contained launcher. Inno Setup 6 is required for `scripts/Build-Installer.ps1 -Version 0.2.0`.
