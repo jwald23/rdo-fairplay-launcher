@@ -18,6 +18,8 @@ public interface IDiscordActivityClient : IDisposable
 public sealed class DiscordActivity(IEventLog log, Func<IDiscordActivityClient>? createClient = null) : IDiscordActivity
 {
     public const string ApplicationId = "1551312894396862556";
+    // Pin the public artwork so Discord cannot reuse the retired uploaded logo asset.
+    public const string LogoUrl = "https://raw.githubusercontent.com/jwald23/rdo-fairplay-launcher/58c773dc64c3c265851106c6ac3f2fbd4e2fa005/website/dist/assets/logo.png";
     private IDiscordActivityClient? client;
     private bool disposed;
 
@@ -25,7 +27,7 @@ public sealed class DiscordActivity(IEventLog log, Func<IDiscordActivityClient>?
     {
         Details = "Private lobbies for Red Dead Online",
         State = "Launcher open",
-        Assets = new Assets { LargeImageKey = "logo", LargeImageText = "RDO FairPlay" },
+        Assets = new Assets { LargeImageKey = LogoUrl, LargeImageText = "RDO FairPlay" },
         Buttons = [
             new DiscordRPC.Button { Label = "Get FairPlay", Url = "https://rdofairplay.com" },
             new DiscordRPC.Button { Label = "Join Discord", Url = MainViewModel.DiscordInvite }

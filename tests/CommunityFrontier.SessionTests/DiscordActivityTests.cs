@@ -60,7 +60,7 @@ static class DiscordActivityTests
         var payload = command.GetProperty("args").GetProperty("activity");
         Check(command.GetProperty("cmd").GetString() == "SET_ACTIVITY" && payload.GetProperty("state").GetString() == "Launcher open",
             "Desktop IPC receives truthful launcher activity");
-        Check(payload.GetProperty("assets").GetProperty("large_image").GetString() == "logo", "Desktop IPC receives the uploaded logo asset key");
+        Check(payload.GetProperty("assets").GetProperty("large_image").GetString() == DiscordActivity.LogoUrl, "Desktop IPC receives the versioned public logo URL");
         var buttons = payload.GetProperty("buttons");
         Check(buttons.GetArrayLength() == 2 && buttons[0].GetProperty("url").GetString() == "https://rdofairplay.com" &&
             buttons[1].GetProperty("url").GetString() == MainViewModel.DiscordInvite, "Desktop IPC receives both public project links");
@@ -69,7 +69,7 @@ static class DiscordActivityTests
         pipe.Disconnect();
         await Accept(pipe, token);
         command = await Read(pipe, token);
-        Check(command.GetProperty("args").GetProperty("activity").GetProperty("assets").GetProperty("large_image").GetString() == "logo",
+        Check(command.GetProperty("args").GetProperty("activity").GetProperty("assets").GetProperty("large_image").GetString() == DiscordActivity.LogoUrl,
             "Activity reconnects and restores its card after Discord restarts");
         await Send(pipe, new { cmd = "SET_ACTIVITY", nonce = command.GetProperty("nonce").GetString(), data = payload }, token);
         var stopping = Task.Run(() => real.SetEnabled(false));

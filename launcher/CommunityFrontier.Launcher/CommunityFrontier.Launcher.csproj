@@ -12,6 +12,6 @@
   <ItemGroup><ProjectReference Include="../CommunityFrontier.Core/CommunityFrontier.Core.csproj" /></ItemGroup>
   <ItemGroup><PackageReference Include="DiscordRichPresence" Version="1.6.1.70" /></ItemGroup>
   <ItemGroup><None Update="launcher.settings.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
-  <ItemGroup><Resource Include="Assets/*.png" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets/*.png" /><Resource Include="Assets/rdo-fairplay.ico" /></ItemGroup>
   <ItemGroup><None Include="../../docs/THIRD_PARTY_LICENSE.txt" Link="THIRD_PARTY_LICENSE.txt" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

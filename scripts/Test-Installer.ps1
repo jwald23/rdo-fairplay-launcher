@@ -18,6 +18,11 @@ if (-not (Test-Path -LiteralPath $exe)) { throw 'Installed executable missing.' 
 if ((RunProcess $exe @('--render-preview', '--small')) -ne 0) { throw 'Installed launcher failed startup.' }
 $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'RDO FairPlay.lnk'
 if (-not (Test-Path -LiteralPath $shortcut)) { throw 'Start menu shortcut missing.' }
+$shell = New-Object -ComObject WScript.Shell
+$shortcutIcon = $shell.CreateShortcut($shortcut).IconLocation -replace ',0$', ''
+$expectedIcon = Join-Path $install "fairplay-icon-$Version.ico"
+if ($shortcutIcon -ne $expectedIcon -or -not (Test-Path -LiteralPath $expectedIcon)) { throw 'Shortcut does not use the current version icon.' }
+if ((Get-FileHash $expectedIcon).Hash -ne (Get-FileHash (Join-Path $root 'launcher/CommunityFrontier.Launcher/Assets/rdo-fairplay.ico')).Hash) { throw 'Installed shortcut artwork differs from the current logo.' }
 New-Item -ItemType Directory -Path (Join-Path $data 'Backups') -Force | Out-Null
 $sentinel = Join-Path $data 'Backups/installer-test.txt'
 Set-Content -LiteralPath $sentinel -Value 'Preserve recovery files'

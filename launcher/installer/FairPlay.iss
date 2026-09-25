@@ -28,7 +28,8 @@ OutputDir={#ReleaseDir}
 OutputBaseFilename=RDOFairPlay-Setup-Windows-x64
 Compression=lzma2
 SolidCompression=yes
-UninstallDisplayIcon={app}\RDOFairPlay.exe
+UninstallDisplayIcon={app}\fairplay-icon-{#AppVersion}.ico
+ChangesAssociations=yes
 AppMutex=Local\CommunityFrontier.Launcher
 CloseApplications=no
 RestartApplications=no
@@ -37,11 +38,12 @@ RestartApplications=no
 Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
+Source: "..\CommunityFrontier.Launcher\Assets\rdo-fairplay.ico"; DestDir: "{app}"; DestName: "fairplay-icon-{#AppVersion}.ico"; Flags: ignoreversion
 Source: "{#PackageDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{userprograms}\RDO FairPlay"; Filename: "{app}\RDOFairPlay.exe"; WorkingDir: "{app}"
-Name: "{userdesktop}\RDO FairPlay"; Filename: "{app}\RDOFairPlay.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{userprograms}\RDO FairPlay"; Filename: "{app}\RDOFairPlay.exe"; WorkingDir: "{app}"; IconFilename: "{app}\fairplay-icon-{#AppVersion}.ico"
+Name: "{userdesktop}\RDO FairPlay"; Filename: "{app}\RDOFairPlay.exe"; WorkingDir: "{app}"; IconFilename: "{app}\fairplay-icon-{#AppVersion}.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\RDOFairPlay.exe"; Description: "Open RDO FairPlay"; Flags: nowait postinstall skipifsilent
