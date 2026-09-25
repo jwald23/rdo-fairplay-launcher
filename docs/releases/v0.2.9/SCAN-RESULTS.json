@@ -1,0 +1,37 @@
+{
+  "portableZip": {
+    "timeout": 2,
+    "detections": [
+      {
+        "vendor": "VBA32",
+        "label": "Trojan.Win32.Wiper"
+      }
+    ],
+    "malicious": 1,
+    "reportUrl": "https://www.virustotal.com/gui/file/81ea498549aa5455073a58844990665127d11b4ae5aee4f53ff1a5f6d7f5955b/detection",
+    "analysisDateUtc": "2026-09-24T12:42:21Z",
+    "archiveCoverage": "VirusTotal warned this exceeds its 3 MB and single-contained-file extraction limit; not complete contained-file coverage.",
+    "sha256": "81ea498549aa5455073a58844990665127d11b4ae5aee4f53ff1a5f6d7f5955b",
+    "undetected": 65,
+    "unsupported": 7
+  },
+  "observedAtUtc": "2026-09-24T12:45:56.3647596Z",
+  "installer": {
+    "timeout": 21,
+    "detections": [
+      {
+        "vendor": "DeepInstinct",
+        "label": "MALICIOUS"
+      }
+    ],
+    "malicious": 1,
+    "reportUrl": "https://www.virustotal.com/gui/file/bc265e114ec6e78a45cee39480aa97a77179a74f7e52fa54a65b1c2c42237e1f/detection",
+    "analysisDateUtc": "2026-09-24T12:41:32Z",
+    "sha256": "bc265e114ec6e78a45cee39480aa97a77179a74f7e52fa54a65b1c2c42237e1f",
+    "undetected": 47,
+    "unsupported": 5,
+    "confirmedTimeout": 1
+  },
+  "version": "0.2.9",
+  "falsePositiveConfirmed": false
+}

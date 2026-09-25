@@ -1,0 +1,35 @@
+{
+  "scannedAtUtc": "2026-09-24T12:41:05.9273915Z",
+  "scanner": "Microsoft Defender",
+  "engineVersion": "1.1.26080.3",
+  "signatureVersion": "1.459.362.0",
+  "signatureUpdatedAtUtc": "2026-09-23T14:00:14Z",
+  "exitCode": 0,
+  "scope": "Published v0.2.9 installer and ZIP plus their release evidence files",
+  "remediationDisabled": true,
+  "extractedPackage": {
+    "exitCode": 0,
+    "scannedAtUtc": "2026-09-24T12:42:35.7231772Z",
+    "fileCount": 405,
+    "scope": "All files extracted from the hash-verified public v0.2.9 portable ZIP"
+  },
+  "publisherReported": true,
+  "files": [
+    {
+      "file": "RDOFairPlay-Setup-Windows-x64.exe",
+      "bytes": 46798989,
+      "sha256": "bc265e114ec6e78a45cee39480aa97a77179a74f7e52fa54a65b1c2c42237e1f",
+      "authenticode": "NotSigned",
+      "virusTotalReport": "https://www.virustotal.com/gui/file/bc265e114ec6e78a45cee39480aa97a77179a74f7e52fa54a65b1c2c42237e1f/detection",
+      "virusTotalStatus": "Not checked by this workflow; open the report to check availability and results."
+    },
+    {
+      "file": "RDOFairPlay-Windows-x64.zip",
+      "bytes": 65622927,
+      "sha256": "81ea498549aa5455073a58844990665127d11b4ae5aee4f53ff1a5f6d7f5955b",
+      "authenticode": "NotApplicable",
+      "virusTotalReport": "https://www.virustotal.com/gui/file/81ea498549aa5455073a58844990665127d11b4ae5aee4f53ff1a5f6d7f5955b/detection",
+      "virusTotalStatus": "Not checked by this workflow; open the report to check availability and results."
+    }
+  ]
+}

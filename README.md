@@ -6,7 +6,7 @@ A Windows launcher for shared private Red Dead Online lobbies, with Discord sign
 
 ## Download
 
-Download **RDOFairPlay-Setup-Windows-x64.exe** from [the latest release](https://github.com/jwald23/rdo-fairplay-launcher/releases/latest). Run the installer, open FairPlay, and sign in with Discord. The .NET runtime is included. A portable ZIP is also available.
+Download **RDOFairPlay-Setup-Windows-x64.exe** from [the latest release](https://github.com/jwald23/rdo-fairplay-launcher/releases/latest). Run the installer, open FairPlay, and sign in with Discord. The .NET runtime is included.
 
 Join [RDO FairPlay on Discord](https://discord.gg/Mp6skUnf2b), submit your Red Dead Online username, and wait for Support approval. Fair Play unlocks once access is confirmed. Original Settings remains available while you wait.
 
@@ -22,15 +22,13 @@ With the Discord desktop app running, FairPlay can show its logo and links to th
 
 Close the launcher and run the newer installer to update. Uninstall restores managed game configuration first and stops if recovery fails. Your settings and recovery files remain under `%LocalAppData%\CommunityFrontier`.
 
-The installer is currently unsigned. Release assets include SHA256 checksums. Downloads do not update themselves automatically.
+The installer is currently unsigned. Release notes include the installer SHA256. Downloads do not update themselves automatically.
 
-New releases include signed GitHub build provenance for the installer and portable ZIP. [Verify your download](docs/DOWNLOAD_VERIFICATION.md) and review its public source and build results. Provenance confirms where a file was built, not that it is free of malicious behavior.
+New releases include signed GitHub build provenance for the installer. [Verify your download](docs/DOWNLOAD_VERIFICATION.md) and review its public source and build results. Provenance confirms where a file was built, not that it is free of malicious behavior.
 
 ## Download evidence
 
-Each new release includes exact-file VirusTotal lookup links, SHA256 hashes, file sizes, Windows signature status and a machine-readable NuGet dependency advisory report. Open the [latest release](https://github.com/jwald23/rdo-fairplay-launcher/releases/latest) and read **DOWNLOAD-EVIDENCE.md**. A lookup link is not a completed scan or a clean verdict. Check the report date and compare its hash with your download.
-
-[How to interpret the evidence](docs/DOWNLOAD_VERIFICATION.md#virustotal-reports-and-release-evidence). No independent security audit or guarantee of safety is claimed.
+Release notes include concise build and VirusTotal links. Optional technical records are kept with the linked build run, and historical scan reports are in [docs/releases](docs/releases/). A lookup link is not a completed scan. [Verification help](docs/DOWNLOAD_VERIFICATION.md).
 
 ## Build
 
@@ -47,3 +45,4 @@ Never share your `CommunityFrontier` user-data folder or game recovery files.
 ## Notices
 
 RDO FairPlay is an independent community project, not affiliated with or endorsed by Rockstar Games or Take-Two Interactive. Red Dead Online and related marks belong to their respective owners. Required third-party notices are in `docs/THIRD_PARTY_LICENSE.txt`.
+

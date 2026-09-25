@@ -1,0 +1,29 @@
+{
+  "version": "0.2.9",
+  "generatedAtUtc": "2026-09-24T12:39:58.4449759Z",
+  "sourceCommit": "2a62035cb6c285f3264664e69fecb698d38c07c8",
+  "buildUrl": "https://github.com/jwald23/rdo-fairplay-launcher/actions/runs/36000301249",
+  "dependencyAudit": {
+    "scope": "Launcher direct and transitive NuGet packages only; excludes bundled .NET runtime, installer tooling and application behavior.",
+    "vulnerablePackageEntries": 0,
+    "report": "DEPENDENCY-AUDIT.json"
+  },
+  "files": [
+    {
+      "file": "RDOFairPlay-Setup-Windows-x64.exe",
+      "bytes": 46798989,
+      "sha256": "bc265e114ec6e78a45cee39480aa97a77179a74f7e52fa54a65b1c2c42237e1f",
+      "authenticode": "NotSigned",
+      "virusTotalReport": "https://www.virustotal.com/gui/file/bc265e114ec6e78a45cee39480aa97a77179a74f7e52fa54a65b1c2c42237e1f/detection",
+      "virusTotalStatus": "Not checked by this workflow; open the report to check availability and results."
+    },
+    {
+      "file": "RDOFairPlay-Windows-x64.zip",
+      "bytes": 65622927,
+      "sha256": "81ea498549aa5455073a58844990665127d11b4ae5aee4f53ff1a5f6d7f5955b",
+      "authenticode": "NotApplicable",
+      "virusTotalReport": "https://www.virustotal.com/gui/file/81ea498549aa5455073a58844990665127d11b4ae5aee4f53ff1a5f6d7f5955b/detection",
+      "virusTotalStatus": "Not checked by this workflow; open the report to check availability and results."
+    }
+  ]
+}

@@ -13,7 +13,7 @@ $audit = ($auditText -join "`n") | ConvertFrom-Json
 if (-not $audit.projects -or $audit.problems -or @($audit.projects | Where-Object problems).Count) { throw 'Dependency advisory report is incomplete.' }
 $vulnerable = @($audit.projects | ForEach-Object { $_.frameworks } | ForEach-Object { @($_.topLevelPackages) + @($_.transitivePackages) } | Where-Object { $_ -and $_.vulnerabilities })
 $auditText | Set-Content (Join-Path $folder 'DEPENDENCY-AUDIT.json') -Encoding utf8NoBOM
-$records = foreach ($name in @('RDOFairPlay-Setup-Windows-x64.exe', 'RDOFairPlay-Windows-x64.zip')) {
+$records = foreach ($name in @('RDOFairPlay-Setup-Windows-x64.exe')) {
     $file = Get-Item -LiteralPath (Join-Path $folder $name)
     $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     $signature = if ($name.EndsWith('.exe')) { (Get-AuthenticodeSignature -LiteralPath $file.FullName).Status.ToString() } else { 'NotApplicable' }

@@ -1,0 +1,2 @@
+165de18fe9a731b4fb14dd02d1f56b24ed30c11a3e6bdc6b858a6d95f021c82e  RDOFairPlay-Setup-Windows-x64.exe
+438aac49c7ddc38333a0ef0f391ca686d1f92fb3340182df94fbb19702323244  RDOFairPlay-Windows-x64.zip

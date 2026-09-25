@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [
+    "https://api.nuget.org/v3/index.json"
+  ],
+  "projects": [
+    {
+      "path": "D:/a/rdo-fairplay-launcher/rdo-fairplay-launcher/launcher/CommunityFrontier.Launcher/CommunityFrontier.Launcher.csproj"
+    }
+  ]
+}
